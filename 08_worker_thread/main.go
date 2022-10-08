@@ -29,7 +29,7 @@ func request(lists... string) <-chan Data{
                 d := Data{i, str}
                 fmt.Printf("request -> %v\n", d)
                 res <- Data{i, str}
-                do_calc(50)
+                do_calc(1000)
             }
         }(idx, str)
     }
@@ -40,24 +40,24 @@ func request(lists... string) <-chan Data{
     return res
 }
 
-func worker(ch <-chan Data, num int) <-chan bool{
-    res := make(chan bool)
+func worker(ch <-chan Data, jobNum int) <-chan bool{
+    done := make(chan bool)
     var wg sync.WaitGroup
-    for i := 0; i < num; i++ {
+    for i := 0; i < jobNum; i++ {
         wg.Add(1)
         go func(i int) {
             defer wg.Done()
             for val := range ch {
                 fmt.Printf("worker #%v <- %v\n", i, val)
-                do_calc(1000)
+                do_calc(10000)
             }
         }(i)
     }
     go func() {
-        defer close(res)
+        defer close(done)
         wg.Wait()
     }()
-    return res
+    return done
 }
 
 func main() {
