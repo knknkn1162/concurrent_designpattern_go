@@ -8,6 +8,7 @@ import (
 )
 
 type Person struct {
+    mx sync.Mutex
     Name string
     History string
     Count  int32
@@ -16,18 +17,18 @@ type Person struct {
 func run(jobNum int, p *Person) <-chan bool{
     ch := make(chan bool)
     var wg sync.WaitGroup
-    var mx sync.Mutex
     for i := 0; i < jobNum; i++ {
         wg.Add(1)
-        go func() {
-            wg.Done()
+        go func(i int) {
+            defer wg.Done()
+            fmt.Printf("run #%v\n", i)
             // single threaded execution with mutex
-            mx.Lock()
+            p.mx.Lock()
             p.History += "x"
-            mx.Unlock()
+            p.mx.Unlock()
             // single threaded execution with atomic
             atomic.AddInt32(&p.Count, 1)
-        }()
+        }(i)
     }
     go func() {
         wg.Wait()
@@ -37,7 +38,7 @@ func run(jobNum int, p *Person) <-chan bool{
 }
 
 func main() {
-    var p = &Person{"Alice", "", 0}
+    var p = &Person{sync.Mutex{}, "Alice", "", 0}
     done := run(5, p)
     <-done
     fmt.Printf("%v\n", p)
